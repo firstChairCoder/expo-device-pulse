@@ -1,9 +1,12 @@
 import ExpoModulesCore
+import UIKit
 
 public class ExpoDevicePulseModule: Module {
   // Each module class must implement the definition function. The definition consists of components
   // that describes the module's functionality and behavior.
   // See https://docs.expo.dev/modules/module-api for more details about available components.
+  private var timer: Timer?
+
   public func definition() -> ModuleDefinition {
     // Sets the name of the module that JavaScript code will use to refer to the module. Takes a string as an argument.
     // Can be inferred from module's class name, but it's recommended to set it explicitly for clarity.
@@ -11,38 +14,41 @@ public class ExpoDevicePulseModule: Module {
     Name("ExpoDevicePulse")
 
     // Defines constant property on the module.
-    Constant("PI") {
-      Double.pi
-    }
+    Constants([
+      "platformVersion": UIDevice.current.systemVersion
+    ])
 
     // Defines event names that the module can send to JavaScript.
-    Events("onChange")
+    Events("pulse")
 
-    // Defines a JavaScript synchronous function that runs the native code on the JavaScript thread.
-    Function("hello") {
-      return "Hello world! 👋"
+    OnCreate {
+      UIDevice.current.isBatteryMonitoringEnabled = true
+      startPulse()
+    }
+
+    OnDestroy {
+      timer?.invalidate()
     }
 
     // Defines a JavaScript function that always returns a Promise and whose native code
     // is by default dispatched on the different thread than the JavaScript runtime runs on.
-    AsyncFunction("setValueAsync") { (value: String) in
-      // Send an event to JavaScript.
-      self.sendEvent("onChange", [
-        "value": value
-      ])
+    AsyncFunction("getDeviceStats") { () -> [String: Any] in 
+      let battery = UIDevice.current.batteryLevel
+      let uptime = ProcessInfo.processInfo.systemUptime
+      
+      return [
+        "batteryLevel": Int(battery * 100),
+        "uptime": uptime,
+        "platform": "ios"
+      ]
     }
+  }
 
-    // Enables the module to be used as a native view. Definition components that are accepted as part of the
-    // view definition: Prop, Events.
-    View(ExpoDevicePulseView.self) {
-      // Defines a setter for the `url` prop.
-      Prop("url") { (view: ExpoDevicePulseView, url: URL) in
-        if view.webView.url != url {
-          view.webView.load(URLRequest(url: url))
-        }
-      }
-
-      Events("onLoad")
+  private func startPulse() {
+    timer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: true) { [weak self] _ in
+      self?.sendEvent("pulse", [
+        "timestamp": Date().timeIntervalSince1970 * 1000
+      ])
     }
   }
 }

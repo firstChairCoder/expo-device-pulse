@@ -1,19 +1,9 @@
-import type { StyleProp, ViewStyle } from 'react-native';
-
-export type OnLoadEventPayload = {
-  url: string;
+export type DeviceStats = {
+  batteryLevel: number;
+  uptime: number;
+  platform: 'ios' | 'android';
 };
 
-export type ExpoDevicePulseModuleEvents = {
-  onChange: (params: ChangeEventPayload) => void;
-};
-
-export type ChangeEventPayload = {
-  value: string;
-};
-
-export type ExpoDevicePulseViewProps = {
-  url: string;
-  onLoad: (event: { nativeEvent: OnLoadEventPayload }) => void;
-  style?: StyleProp<ViewStyle>;
+export type PulseEvent = {
+  timestamp: number;
 };

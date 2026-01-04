@@ -1,11 +1,10 @@
 import { NativeModule, requireNativeModule } from 'expo';
 
-import { ExpoDevicePulseModuleEvents } from './ExpoDevicePulse.types';
+import { DeviceStats } from './ExpoDevicePulse.types';
 
-declare class ExpoDevicePulseModule extends NativeModule<ExpoDevicePulseModuleEvents> {
-  PI: number;
-  hello(): string;
-  setValueAsync(value: string): Promise<void>;
+declare class ExpoDevicePulseModule extends NativeModule {
+  platformVersion: string;
+  getDeviceStats(): Promise<DeviceStats>;
 }
 
 // This call loads the native module object from the JSI.

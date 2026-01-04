@@ -1,10 +1,18 @@
 package expo.modules.devicepulse
 
+import android.content.Context
+import android.os.BatteryManager
+import android.os.Build
+import android.os.Handler
+import android.os.Looper
+import android.os.SystemClock
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
-import java.net.URL
 
 class ExpoDevicePulseModule : Module() {
+  private val handler = Handler(Looper.getMainLooper())
+  private val interval = 5000L
+
   // Each module class must implement the definition function. The definition consists of components
   // that describes the module's functionality and behavior.
   // See https://docs.expo.dev/modules/module-api for more details about available components.
@@ -15,36 +23,49 @@ class ExpoDevicePulseModule : Module() {
     Name("ExpoDevicePulse")
 
     // Defines constant property on the module.
-    Constant("PI") {
-      Math.PI
-    }
+    Constants(
+      "platformVersion" to Build.VERSION.RELEASE
+    )
 
     // Defines event names that the module can send to JavaScript.
-    Events("onChange")
+    Events("pulse")
 
-    // Defines a JavaScript synchronous function that runs the native code on the JavaScript thread.
-    Function("hello") {
-      "Hello world! 👋"
+    OnCreate {
+      startPulse()
+    }
+
+    OnDestroy {
+      handler.removeCallbacksAndMessages(null)
     }
 
     // Defines a JavaScript function that always returns a Promise and whose native code
     // is by default dispatched on the different thread than the JavaScript runtime runs on.
-    AsyncFunction("setValueAsync") { value: String ->
-      // Send an event to JavaScript.
-      sendEvent("onChange", mapOf(
-        "value" to value
-      ))
-    }
+    AsyncFunction("getDeviceStats") {
+      val context = appContext.reactContext ?: return@AsyncFunction null
 
-    // Enables the module to be used as a native view. Definition components that are accepted as part of
-    // the view definition: Prop, Events.
-    View(ExpoDevicePulseView::class) {
-      // Defines a setter for the `url` prop.
-      Prop("url") { view: ExpoDevicePulseView, url: URL ->
-        view.webView.loadUrl(url.toString())
-      }
-      // Defines an event that the view can send to JavaScript.
-      Events("onLoad")
+      val batteryManager = context.getSystemService(Context.BATTERY_SERVICE) as BatteryManager
+
+      val battery = batteryManager.getIntProperty(
+        BatteryManager.BATTERY_PROPERTY_CAPACITY
+      )
+
+      val uptime = SystemClock.elapsedRealtime() / 1000
+
+      mapOf(
+        "batteryLevel" to battery,
+        "uptime" to uptime,
+        "platform" to "android"
+      )
     }
+  }
+
+  private fun startPulse() {
+    val runnable = object : Runnable {
+      override fun run() {
+        sendEvent("pulse", mapOf("timestamp" to System.currentTimeMillis()))
+        handler.postDelayed(this, interval)
+      }
+    }
+    handler.post(runnable)
   }
 }
